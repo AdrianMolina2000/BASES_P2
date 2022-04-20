@@ -48,14 +48,14 @@ begin
                              genero, estado_civil, codigo_municipio)
         values (generarCui(municipio), id_P, id_M, primerN, segundoN, tercerN, apellidoP, apellidoM,
                 STR_TO_DATE(fechaNac, '%Y-%m-%d'), gen, 1, municipio);
+
+        select CONCAT('Ha nacido ', primerN, ' ', segundoN, ' ', apellidoP, ' ', apellidoM) AVISO;
+    ELSE
+        select 'SOLO PUEDEN TENER HIJOS ENTRE GENEROS OPUESTOS' AVISO;
     END IF;
 end;
 
 
-
-/*
- CREO QUE LE FALTAN VALIDACIONES
- */
 DROP PROCEDURE IF EXISTS AddDefuncion;
 CREATE PROCEDURE AddDefuncion( dpi_D BIGINT, fecha_d varchar(20), motivo_m varchar(200))
 begin
@@ -72,6 +72,7 @@ begin
     declare divorciada int;
     declare dpi_hombre_div int;
     declare id_hombre_div int;
+    declare muertes int;
 
     select p.id, p.genero, p.nombre1 into id_per, gene, nombre_m
     from persona p
@@ -82,76 +83,83 @@ begin
     inner join persona p on p.id = d.id_persona
     where p.cui = dpi_D;
 
+    select count(*) into muertes
+    from defuncion d
+    where d.id_persona = id_per;
 
-    insert into defuncion (fecha_fallecimiento, motivo, id_persona)
-    values (STR_TO_DATE(fecha_d, '%Y-%m-%d'), motivo_m, id_per);
+    IF muertes > 0 THEN
+        select 'Solo se puede morir una vez...' AVISO;
+    ELSE
+        insert into defuncion (fecha_fallecimiento, motivo, id_persona)
+        values (STR_TO_DATE(fecha_d, '%Y-%m-%d'), motivo_m, id_per);
 
 
-    IF gene = 'M' THEN
-        select count(*) into casado
-        from matrimonio m
-            inner join dpi d on d.id = m.dpi_hombre
-            inner join persona p on p.id = d.id_persona
-        where p.cui = dpi_D;
-
-        select count(*) into divorciado
-        from divorcio di
-            inner join matrimonio m on m.id = di.id_matrimonio
-            inner join dpi d on d.id_persona = m.dpi_hombre
-            inner join persona p on p.id = d.id_persona
-        where p.cui = dpi_D;
-
-        IF casado - divorciado = 1 THEN
-            select dpi_mujer into dpi_mujer_div
+        IF gene = 'M' THEN
+            select count(*) into casado
             from matrimonio m
-            where m.dpi_hombre = dpi_per
-            order by fecha_matrimonio DESC
-            LIMIT 1;
-
-            select p.id, p.nombre1 into id_mujer_div, nombre_d
-            from dpi d
+                inner join dpi d on d.id = m.dpi_hombre
                 inner join persona p on p.id = d.id_persona
-            where d.id = dpi_mujer_div;
+            where p.cui = dpi_D;
 
-            update persona
-            set estado_civil = 4
-            where id = id_mujer_div;
+            select count(*) into divorciado
+            from divorcio di
+                inner join matrimonio m on m.id = di.id_matrimonio
+                inner join dpi d on d.id_persona = m.dpi_hombre
+                inner join persona p on p.id = d.id_persona
+            where p.cui = dpi_D;
 
-            select CONCAT('Murio ', nombre_m, ' y ', nombre_d, ' quedo viuda') DEFUNCION;
-        end if;
-    ELSEIF gene = 'F' THEN
-        select count(*) into casada
-        from matrimonio m
-            inner join dpi d on d.id = m.dpi_mujer
-            inner join persona p on p.id = d.id_persona
-        where p.cui = dpi_D;
+            IF casado - divorciado = 1 THEN
+                select dpi_mujer into dpi_mujer_div
+                from matrimonio m
+                where m.dpi_hombre = dpi_per
+                order by fecha_matrimonio DESC
+                LIMIT 1;
 
-        select count(*) into divorciada
-        from divorcio di
-            inner join matrimonio m on m.id = di.id_matrimonio
-            inner join dpi d on d.id_persona = m.dpi_mujer
-            inner join persona p on p.id = d.id_persona
-        where p.cui = dpi_D;
+                select p.id, p.nombre1 into id_mujer_div, nombre_d
+                from dpi d
+                    inner join persona p on p.id = d.id_persona
+                where d.id = dpi_mujer_div;
 
-        IF casada - divorciada = 1 THEN
-            select dpi_hombre into dpi_hombre_div
+                update persona
+                set estado_civil = 4
+                where id = id_mujer_div;
+
+                select CONCAT('Murio ', nombre_m, ' y ', nombre_d, ' quedo viuda') DEFUNCION;
+            end if;
+        ELSEIF gene = 'F' THEN
+            select count(*) into casada
             from matrimonio m
-            where m.dpi_mujer = dpi_per
-            order by fecha_matrimonio DESC
-            LIMIT 1;
-
-            select p.id, p.nombre1 into id_hombre_div, nombre_d
-            from dpi d
+                inner join dpi d on d.id = m.dpi_mujer
                 inner join persona p on p.id = d.id_persona
-            where d.id = dpi_hombre_div;
+            where p.cui = dpi_D;
 
-            update persona
-            set estado_civil = 4
-            where id = id_hombre_div;
+            select count(*) into divorciada
+            from divorcio di
+                inner join matrimonio m on m.id = di.id_matrimonio
+                inner join dpi d on d.id_persona = m.dpi_mujer
+                inner join persona p on p.id = d.id_persona
+            where p.cui = dpi_D;
 
-            select CONCAT('Murio ', nombre_m, ' y ', nombre_d, ' quedo viudo') DEFUNCION;
-        end if;
-    end if;
+            IF casada - divorciada = 1 THEN
+                select dpi_hombre into dpi_hombre_div
+                from matrimonio m
+                where m.dpi_mujer = dpi_per
+                order by fecha_matrimonio DESC
+                LIMIT 1;
+
+                select p.id, p.nombre1 into id_hombre_div, nombre_d
+                from dpi d
+                    inner join persona p on p.id = d.id_persona
+                where d.id = dpi_hombre_div;
+
+                update persona
+                set estado_civil = 4
+                where id = id_hombre_div;
+
+                select CONCAT('Murio ', nombre_m, ' y ', nombre_d, ' quedo viudo') DEFUNCION;
+            end if;
+        END IF;
+    END IF;
 end;
 
 
@@ -228,33 +236,52 @@ begin
 end;
 
 
-
-
-
-
 DROP PROCEDURE IF EXISTS addDivorcio;
 CREATE PROCEDURE addDivorcio(fecha_m varchar(20),  id_ma INT)
 begin
 
     declare id_h INT;
     declare id_m INT;
+    declare nombre1 varchar(50);
+    declare nombre2 varchar(50);
+    declare divorcios int;
+    declare casados int;
 
-    insert into divorcio (fecha_divorcio, id_matrimonio)
-    values (STR_TO_DATE(fecha_m, '%Y-%m-%d'), id_ma);
 
-    select d.id into id_h
+    select count(*) into divorcios
+    from divorcio d
+    where d.id_matrimonio = id_ma;
+
+    select count(*) into casados
     from matrimonio m
-    inner join dpi d on d.id = m.dpi_hombre
-    inner join persona p on p.id = d.id_persona
     where m.id = id_ma;
 
-    select d.id into id_m
-    from matrimonio m
-    inner join dpi d on d.id = m.dpi_mujer
-    inner join persona p on p.id = d.id_persona
-    where m.id = id_ma;
+    IF casados = 0 THEN
+        select 'ESTE MATRIMONIO NO EXISTE' AVISO;
+    ELSE
+        IF divorcios > 0 THEN
+            select 'YA SE HAN DIVORCIADO DE ESTE MATRIMONIO' AVISO;
+        ELSE
+            select d.id, p.nombre1 into id_h, nombre1
+            from matrimonio m
+                inner join dpi d on d.id = m.dpi_hombre
+                inner join persona p on p.id = d.id_persona
+            where m.id = id_ma;
 
-    update persona
-    set estado_civil = 3
-    where id = id_h or id = id_m;
+            select d.id, p.nombre1 into id_m, nombre2
+            from matrimonio m
+                inner join dpi d on d.id = m.dpi_mujer
+                inner join persona p on p.id = d.id_persona
+            where m.id = id_ma;
+
+            insert into divorcio (fecha_divorcio, id_matrimonio)
+            values (STR_TO_DATE(fecha_m, '%Y-%m-%d'), id_ma);
+
+            update persona
+            set estado_civil = 3
+            where id = id_h or id = id_m;
+
+            select CONCAT('Se han divorciado ', nombre1, ' y ', nombre2) AVISO;
+        END IF;
+    END IF;
 end;
