@@ -89,7 +89,7 @@ CREATE TABLE proyecto2.licencia (
   id INT NOT NULL AUTO_INCREMENT,
   fecha_emision DATE NOT NULL,
   fecha_vencimiento DATE NOT NULL,
-  estado CHAR(1) NOT NULL,
+  estado INT NOT NULL,
   tipo_licencia INT NOT NULL,
   id_persona INT NOT NULL,
   PRIMARY KEY (id),
@@ -105,5 +105,3 @@ CREATE TABLE proyecto2.anular (
   PRIMARY KEY (id),
   FOREIGN KEY(id_licencia) REFERENCES licencia(id) ON DELETE CASCADE ON UPDATE CASCADE
 );
-
-

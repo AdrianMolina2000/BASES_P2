@@ -337,3 +337,69 @@ begin
         END IF;
     END IF;
 end;
+
+
+DROP PROCEDURE IF EXISTS addLicencia;
+CREATE PROCEDURE addLicencia(Cui_g BIGINT, fecha_e varchar(50), tipo_l char(1))
+begin
+
+    declare fecha_n DATE;
+    declare id_p INT;
+    declare nombre VARCHAR(50);
+    declare lapso INT;
+    declare licen1 INT;
+    declare licen2 INT;
+
+
+    select p.fecha_nacimiento, p.id, p.nombre1 into fecha_n, id_p, nombre
+    from persona p
+    where p.cui = Cui_g;
+
+    select TIMESTAMPDIFF(YEAR, fecha_n, fecha_e) into lapso;
+
+    select count(*) into licen1
+    from licencia l
+    inner join persona p on p.id = l.id_persona
+    where p.cui = Cui_g and l.estado = 1 and l.tipo_licencia != 5;
+
+
+    select count(*) into licen2
+    from licencia l
+    inner join persona p on p.id = l.id_persona
+    where p.cui = Cui_g and l.estado = 1 and l.tipo_licencia = 5;
+
+    IF lapso < 16 THEN
+        select 'DEBES SER MAYOR A 16 AÑOS PARA OBTENER LICENCIA' AVISO;
+    ELSE
+        IF licen1 = 0 and tipo_l != 'E' THEN
+            IF licen2 = 1 and tipo_l = 'C' THEN
+                insert into licencia (fecha_emision, fecha_vencimiento, estado, tipo_licencia, id_persona)
+                values (fecha_e, DATE(DATE_ADD(fecha_emision, INTERVAL 1 YEAR)), 1, 3, id_p);
+
+                select CONCAT('Se ha generado una licencia C para ', nombre) AVISO;
+
+            ELSEIF licen2 = 1 and tipo_l = 'M' THEN
+                insert into licencia (fecha_emision, fecha_vencimiento, estado, tipo_licencia, id_persona)
+                values (fecha_e, DATE(DATE_ADD(fecha_emision, INTERVAL 1 YEAR)), 1, 4, id_p);
+
+                select CONCAT('Se ha generado una licencia M para ', nombre) AVISO;
+
+            ELSEIF tipo_l = 'A' or tipo_l = 'B' THEN
+                select 'TU PRIMERA LICENCIA NO PUEDE SER A o B' AVISO;
+
+            ELSE
+                select 'NO PUEDES TENER 2 LICENCIAS DE LOS TIPOS C o M' AVISO;
+
+            END IF;
+        ELSE
+            IF licen2 = 1 THEN
+                select 'NO PUEDES TENER 2 LICENCIAS DEL TIPOS E' AVISO;
+            ELSE
+                insert into licencia (fecha_emision, fecha_vencimiento, estado, tipo_licencia, id_persona)
+                values (fecha_e, DATE(DATE_ADD(fecha_emision, INTERVAL 1 YEAR)), 1, 5, id_p);
+
+                select CONCAT('Se ha generado una licencia E para ', nombre) AVISO;
+            END IF;
+        END IF;
+    END IF;
+end;

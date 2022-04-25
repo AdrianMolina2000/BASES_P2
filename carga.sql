@@ -27,3 +27,6 @@ values  (STR_TO_DATE('2018-12-21', '%Y-%m-%d'), 1, 101),
         (STR_TO_DATE('2019-9-13', '%Y-%m-%d'), 4, 301),
         (STR_TO_DATE('2019-9-13', '%Y-%m-%d'), 5, 2201),
         (STR_TO_DATE('2019-9-13', '%Y-%m-%d'), 6, 2102);
+
+insert into tipo (estado)
+values ('A'), ('B'), ('C'), ('M'), ('E');
