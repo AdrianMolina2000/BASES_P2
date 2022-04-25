@@ -125,6 +125,8 @@ begin
                 where id = id_mujer_div;
 
                 select CONCAT('Murio ', nombre_m, ' y ', nombre_d, ' quedo viuda') DEFUNCION;
+            ELSE
+                select CONCAT('Murio ', nombre_m) DEFUNCION;
             end if;
         ELSEIF gene = 'F' THEN
             select count(*) into casada
@@ -157,6 +159,10 @@ begin
                 where id = id_hombre_div;
 
                 select CONCAT('Murio ', nombre_m, ' y ', nombre_d, ' quedo viudo') DEFUNCION;
+
+            ELSE
+                select CONCAT('Murio ', nombre_m) DEFUNCION;
+
             end if;
         END IF;
     END IF;
@@ -282,6 +288,52 @@ begin
             where id = id_h or id = id_m;
 
             select CONCAT('Se han divorciado ', nombre1, ' y ', nombre2) AVISO;
+        END IF;
+    END IF;
+end;
+
+
+DROP PROCEDURE IF EXISTS generarDPI;
+CREATE PROCEDURE generarDPI(dpi_g BIGINT, fecha_e varchar(50), mun int)
+begin
+
+    declare dpis INT;
+    declare fecha_n DATE;
+    declare lapso INT;
+    declare muni INT;
+    declare nombre VARCHAR(50);
+    declare id_p INT;
+
+
+    select count(*) into dpis
+    from dpi d
+    inner join persona p on p.id = d.id_persona
+    where p.cui = dpi_g;
+
+    select p.id, p.fecha_nacimiento, p.nombre1 into id_p, fecha_n, nombre
+    from persona p
+    where cui = dpi_g;
+
+    select TIMESTAMPDIFF(YEAR, fecha_n, fecha_e) into lapso;
+
+    select count(*) into muni
+    from municipio m
+    where m.id = mun;
+
+    IF dpis > 0 THEN
+        select 'Ya existe este DPI' AVISO;
+    ELSE
+        IF lapso < 18 THEN
+            select 'DEBES SER MAYOR DE EDAD PARA TENER DPI' AVISO;
+        ELSE
+            IF muni = 0 THEN
+                select 'ESTE MUNICIPIO NO EXISTE' AVISO;
+            ELSE
+                insert into dpi (fecha_emision, id_persona, codigo_municipio)
+                values (STR_TO_DATE(fecha_e, '%Y-%m-%d'), id_p, mun);
+
+                select CONCAT('Se ha creado el dpi ', dpi_g) AVISO;
+            END IF;
         END IF;
     END IF;
 end;
