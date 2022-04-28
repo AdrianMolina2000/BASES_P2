@@ -360,46 +360,236 @@ begin
     select count(*) into licen1
     from licencia l
     inner join persona p on p.id = l.id_persona
-    where p.cui = Cui_g and l.estado = 1 and l.tipo_licencia != 5;
+    where p.cui = Cui_g and l.tipo_licencia != 5;
 
 
     select count(*) into licen2
     from licencia l
     inner join persona p on p.id = l.id_persona
-    where p.cui = Cui_g and l.estado = 1 and l.tipo_licencia = 5;
+    where p.cui = Cui_g and l.tipo_licencia = 5;
 
     IF lapso < 16 THEN
         select 'DEBES SER MAYOR A 16 AÑOS PARA OBTENER LICENCIA' AVISO;
     ELSE
         IF licen1 = 0 and tipo_l != 'E' THEN
-            IF licen2 = 1 and tipo_l = 'C' THEN
+            IF tipo_l = 'C' THEN
                 insert into licencia (fecha_emision, fecha_vencimiento, estado, tipo_licencia, id_persona)
-                values (fecha_e, DATE(DATE_ADD(fecha_emision, INTERVAL 1 YEAR)), 1, 3, id_p);
+                values (fecha_e, DATE(DATE_ADD(fecha_e, INTERVAL 1 YEAR)), 'C1', 3, id_p);
 
                 select CONCAT('Se ha generado una licencia C para ', nombre) AVISO;
 
-            ELSEIF licen2 = 1 and tipo_l = 'M' THEN
+            ELSEIF tipo_l = 'M' THEN
                 insert into licencia (fecha_emision, fecha_vencimiento, estado, tipo_licencia, id_persona)
-                values (fecha_e, DATE(DATE_ADD(fecha_emision, INTERVAL 1 YEAR)), 1, 4, id_p);
+                values (fecha_e, DATE(DATE_ADD(fecha_e, INTERVAL 1 YEAR)), '0', 4, id_p);
 
                 select CONCAT('Se ha generado una licencia M para ', nombre) AVISO;
 
             ELSEIF tipo_l = 'A' or tipo_l = 'B' THEN
                 select 'TU PRIMERA LICENCIA NO PUEDE SER A o B' AVISO;
-
             ELSE
-                select 'NO PUEDES TENER 2 LICENCIAS DE LOS TIPOS C o M' AVISO;
-
+                select 'ERROR' AVISO;
             END IF;
-        ELSE
+        ELSEIF tipo_l = 'E' THEN
             IF licen2 = 1 THEN
                 select 'NO PUEDES TENER 2 LICENCIAS DEL TIPOS E' AVISO;
             ELSE
                 insert into licencia (fecha_emision, fecha_vencimiento, estado, tipo_licencia, id_persona)
-                values (fecha_e, DATE(DATE_ADD(fecha_emision, INTERVAL 1 YEAR)), 1, 5, id_p);
+                values (fecha_e, DATE(DATE_ADD(fecha_e, INTERVAL 1 YEAR)), '0', 5, id_p);
 
                 select CONCAT('Se ha generado una licencia E para ', nombre) AVISO;
             END IF;
+        ELSEIF licen1 > 0 THEN
+            select 'NO PUEDES TENER 2 LICENCIAS DEL TIPO C O M' AVISO;
+        ELSE
+            select 'ERROR' AVISO;
         END IF;
     END IF;
 end;
+
+
+DROP PROCEDURE IF EXISTS renewLicencia;
+CREATE PROCEDURE renewLicencia(no_lic INT, fecha_r varchar(50), tipo_l char(1))
+begin
+
+    declare fecha_ven DATE;
+    declare fecha_anul DATE;
+    declare estado_lic CHAR(2);
+    declare tip_lic INT;
+    declare id_p INT;
+    declare lic INT;
+
+    select l.fecha_vencimiento, l.fecha_anulada, l.estado, l.id_persona, l.tipo_licencia into fecha_ven, fecha_anul, estado_lic, id_p, tip_lic
+    from licencia l
+    where l.id = no_lic;
+
+    select count(*) into lic
+    from licencia
+    where licencia.id = no_lic;
+
+    IF lic = 0 THEN
+        select 'ESTA LICENCIA NO EXISTE' AVISO;
+    ELSE
+        IF fecha_r > fecha_anul or fecha_anul is null THEN
+            IF tipo_l = 'M' THEN
+                IF fecha_ven > STR_TO_DATE(fecha_r, '%Y-%m-%d') THEN
+                    update licencia
+                    set licencia.fecha_vencimiento = DATE_ADD(fecha_vencimiento, INTERVAL 1 YEAR),
+                    tipo_licencia = 4
+                    where licencia.id = no_lic;
+                ELSE
+                    update licencia
+                    set licencia.fecha_vencimiento = DATE_ADD(STR_TO_DATE(fecha_r, '%Y-%m-%d'), INTERVAL 1 YEAR),
+                    tipo_licencia = 4
+                    where licencia.id = no_lic;
+                END IF;
+                select 'Se ha renovado a la licencia M' AVISO;
+            ELSEIF tipo_l = 'E' THEN
+                IF tip_lic = 5 THEN
+                    IF fecha_ven > STR_TO_DATE(fecha_r, '%Y-%m-%d') THEN
+                        update licencia
+                        set licencia.fecha_vencimiento = DATE_ADD(fecha_vencimiento, INTERVAL 1 YEAR),
+                        tipo_licencia = 5
+                        where licencia.id = no_lic;
+                    ELSE
+                        update licencia
+                        set licencia.fecha_vencimiento = DATE_ADD(STR_TO_DATE(fecha_r, '%Y-%m-%d'), INTERVAL 1 YEAR),
+                        tipo_licencia = 5
+                        where licencia.id = no_lic;
+                    END IF;
+                    select 'Se ha renovado a la licencia E' AVISO;
+                ELSE
+                    select 'SOLO SE PUEDE RENOVAR UNA LICENCIA E POR UNA DE LA MISMA CLASE' AVISO;
+                END IF;
+            ELSEIF tipo_l = 'C' THEN
+                IF estado_lic = 'C1' THEN
+                    IF fecha_ven > STR_TO_DATE(fecha_r, '%Y-%m-%d') THEN
+                        update licencia
+                        set licencia.fecha_vencimiento = DATE_ADD(fecha_vencimiento, INTERVAL 1 YEAR),
+                            estado = 'C2',
+                            tipo_licencia = 3
+                        where licencia.id = no_lic;
+                    ELSE
+                        update licencia
+                        set licencia.fecha_vencimiento = DATE_ADD(STR_TO_DATE(fecha_r, '%Y-%m-%d'), INTERVAL 1 YEAR),
+                            estado = 'C2',
+                            tipo_licencia = 3
+                        where licencia.id = no_lic;
+                    END IF;
+                ELSEIF estado_lic = 'C2' THEN
+                    IF fecha_ven > STR_TO_DATE(fecha_r, '%Y-%m-%d') THEN
+                        update licencia
+                        set licencia.fecha_vencimiento = DATE_ADD(fecha_vencimiento, INTERVAL 1 YEAR),
+                            estado = 'C3',
+                            tipo_licencia = 3
+                        where licencia.id = no_lic;
+                    ELSE
+                        update licencia
+                        set licencia.fecha_vencimiento = DATE_ADD(STR_TO_DATE(fecha_r, '%Y-%m-%d'), INTERVAL 1 YEAR),
+                            estado = 'C3',
+                            tipo_licencia = 3
+                        where licencia.id = no_lic;
+                    END IF;
+                ELSEIF estado_lic = 'C3' THEN
+                    IF fecha_ven > STR_TO_DATE(fecha_r, '%Y-%m-%d') THEN
+                        update licencia
+                        set licencia.fecha_vencimiento = DATE_ADD(fecha_vencimiento, INTERVAL 1 YEAR),
+                            estado = 'C4',
+                            tipo_licencia = 3
+                        where licencia.id = no_lic;
+                    ELSE
+                        update licencia
+                        set licencia.fecha_vencimiento = DATE_ADD(STR_TO_DATE(fecha_r, '%Y-%m-%d'), INTERVAL 1 YEAR),
+                            estado = 'C4',
+                            tipo_licencia = 3
+                        where licencia.id = no_lic;
+                    END IF;
+                ELSE
+                    IF fecha_ven > STR_TO_DATE(fecha_r, '%Y-%m-%d') THEN
+                        update licencia
+                        set licencia.fecha_vencimiento = DATE_ADD(fecha_vencimiento, INTERVAL 1 YEAR),
+                            estado = 'C3',
+                            tipo_licencia = 3
+                        where licencia.id = no_lic;
+                    ELSE
+                        update licencia
+                        set licencia.fecha_vencimiento = DATE_ADD(STR_TO_DATE(fecha_r, '%Y-%m-%d'), INTERVAL 1 YEAR),
+                            estado = 'C3',
+                            tipo_licencia = 3
+                        where licencia.id = no_lic;
+                    END IF;
+                END IF;
+                select 'Se ha renovado a la licencia C' AVISO;
+            ELSEIF tipo_l = 'B' THEN
+                IF estado_lic = 'C3' or estado_lic = 'A' THEN
+                    update licencia
+                    set licencia.fecha_vencimiento = DATE_ADD(STR_TO_DATE(fecha_r, '%Y-%m-%d'), INTERVAL 1 YEAR),
+                        estado = 'B',
+                        tipo_licencia = 2
+                    where licencia.id = no_lic;
+
+                    select 'Se ha renovado la licencia B' AVISO;
+                ELSE
+                    select 'AUN NO SE PUEDE CREAR UNA LICENCIA TIPO B' AVISO;
+                END IF;
+            ELSEIF tipo_l = 'A' THEN
+                IF estado_lic = 'C4' or estado_lic = 'B' THEN
+                    update licencia
+                    set licencia.fecha_vencimiento = DATE_ADD(STR_TO_DATE(fecha_r, '%Y-%m-%d'), INTERVAL 1 YEAR),
+                        estado = 'A',
+                        tipo_licencia = 1
+                    where licencia.id = no_lic;
+
+                    select 'Se ha renovado la licencia A' AVISO;
+                ELSE
+                    select 'AUN NO SE PUEDE CREAR UNA LICENCIA TIPO A' AVISO;
+                END IF;
+            ELSE
+                select 'LICENCIA NO VALIDA' AVISO;
+            END IF;
+        ELSE
+            select 'NO SE PUEDE RENOVAR MIENTRAS ESTA ANULADA' AVISO;
+        END IF;
+    END IF;
+end;
+
+
+DROP PROCEDURE IF EXISTS anularLicencia;
+CREATE PROCEDURE anularLicencia(no_lic INT, fecha_a varchar(50), motivo varchar(200))
+begin
+    declare lic INT;
+    declare anu INT;
+
+    select count(*) into lic
+    from licencia l
+    where l.id = no_lic;
+
+    select count(*) into anu
+    from anular a
+    where a.id_licencia = no_lic;
+
+    IF lic = 0 THEN
+        select 'ESTA LICENCIA NO EXISTE' AVISO;
+    ELSE
+        IF anu > 0 THEN
+            insert into anular (fecha_anulacion, motivo, id_licencia)
+            values (STR_TO_DATE(fecha_a, '%Y-%m-%d'), motivo, no_lic);
+
+            update licencia
+            set fecha_anulada =  DATE(DATE_ADD(fecha_a, INTERVAL 2 YEAR))
+            where licencia.id = no_lic;
+
+            select CONCAT('Se anulo de nuevo la licencia NO.', no_lic) AVISO;
+        ELSE
+            insert into anular (fecha_anulacion, motivo, id_licencia)
+            values (STR_TO_DATE(fecha_a, '%Y-%m-%d'), motivo, no_lic);
+
+            update licencia
+            set fecha_anulada =  DATE(DATE_ADD(fecha_a, INTERVAL 2 YEAR))
+            where licencia.id = no_lic;
+
+            select CONCAT('Se anulo la licencia NO.', no_lic) AVISO;
+        END IF;
+    END IF;
+end;
+
+
