@@ -73,8 +73,9 @@ begin
     declare dpi_hombre_div int;
     declare id_hombre_div int;
     declare muertes int;
+    declare fecha_nac DATE;
 
-    select p.id, p.genero, p.nombre1 into id_per, gene, nombre_m
+    select p.id, p.genero, p.nombre1, p.fecha_nacimiento into id_per, gene, nombre_m, fecha_nac
     from persona p
     where p.cui = dpi_D;
 
@@ -87,83 +88,87 @@ begin
     from defuncion d
     where d.id_persona = id_per;
 
-    IF muertes > 0 THEN
-        select 'Solo se puede morir una vez...' AVISO;
+    IF fecha_nac > STR_TO_DATE(fecha_d, '%Y-%m-%d') THEN
+        select 'NO PUEDES MORIR ANTES DE NACER, viajes en el tiempo?' AVISO;
     ELSE
-        insert into defuncion (fecha_fallecimiento, motivo, id_persona)
-        values (STR_TO_DATE(fecha_d, '%Y-%m-%d'), motivo_m, id_per);
+        IF muertes > 0 THEN
+            select 'SOLO SE PUEDE MORIR UNA VEZ...' AVISO;
+        ELSE
+            insert into defuncion (fecha_fallecimiento, motivo, id_persona)
+            values (STR_TO_DATE(fecha_d, '%Y-%m-%d'), motivo_m, id_per);
 
 
-        IF gene = 'M' THEN
-            select count(*) into casado
-            from matrimonio m
-                inner join dpi d on d.id = m.dpi_hombre
-                inner join persona p on p.id = d.id_persona
-            where p.cui = dpi_D;
-
-            select count(*) into divorciado
-            from divorcio di
-                inner join matrimonio m on m.id = di.id_matrimonio
-                inner join dpi d on d.id_persona = m.dpi_hombre
-                inner join persona p on p.id = d.id_persona
-            where p.cui = dpi_D;
-
-            IF casado - divorciado = 1 THEN
-                select dpi_mujer into dpi_mujer_div
+            IF gene = 'M' THEN
+                select count(*) into casado
                 from matrimonio m
-                where m.dpi_hombre = dpi_per
-                order by fecha_matrimonio DESC
-                LIMIT 1;
-
-                select p.id, p.nombre1 into id_mujer_div, nombre_d
-                from dpi d
+                    inner join dpi d on d.id = m.dpi_hombre
                     inner join persona p on p.id = d.id_persona
-                where d.id = dpi_mujer_div;
+                where p.cui = dpi_D;
 
-                update persona
-                set estado_civil = 4
-                where id = id_mujer_div;
+                select count(*) into divorciado
+                from divorcio di
+                    inner join matrimonio m on m.id = di.id_matrimonio
+                    inner join dpi d on d.id_persona = m.dpi_hombre
+                    inner join persona p on p.id = d.id_persona
+                where p.cui = dpi_D;
 
-                select CONCAT('Murio ', nombre_m, ' y ', nombre_d, ' quedo viuda') DEFUNCION;
-            ELSE
-                select CONCAT('Murio ', nombre_m) DEFUNCION;
-            end if;
-        ELSEIF gene = 'F' THEN
-            select count(*) into casada
-            from matrimonio m
-                inner join dpi d on d.id = m.dpi_mujer
-                inner join persona p on p.id = d.id_persona
-            where p.cui = dpi_D;
+                IF casado - divorciado = 1 THEN
+                    select dpi_mujer into dpi_mujer_div
+                    from matrimonio m
+                    where m.dpi_hombre = dpi_per
+                    order by fecha_matrimonio DESC
+                    LIMIT 1;
 
-            select count(*) into divorciada
-            from divorcio di
-                inner join matrimonio m on m.id = di.id_matrimonio
-                inner join dpi d on d.id_persona = m.dpi_mujer
-                inner join persona p on p.id = d.id_persona
-            where p.cui = dpi_D;
+                    select p.id, p.nombre1 into id_mujer_div, nombre_d
+                    from dpi d
+                        inner join persona p on p.id = d.id_persona
+                    where d.id = dpi_mujer_div;
 
-            IF casada - divorciada = 1 THEN
-                select dpi_hombre into dpi_hombre_div
+                    update persona
+                    set estado_civil = 4
+                    where id = id_mujer_div;
+
+                    select CONCAT('Murio ', nombre_m, ' y ', nombre_d, ' quedo viuda') DEFUNCION;
+                ELSE
+                    select CONCAT('Murio ', nombre_m) DEFUNCION;
+                end if;
+            ELSEIF gene = 'F' THEN
+                select count(*) into casada
                 from matrimonio m
-                where m.dpi_mujer = dpi_per
-                order by fecha_matrimonio DESC
-                LIMIT 1;
-
-                select p.id, p.nombre1 into id_hombre_div, nombre_d
-                from dpi d
+                    inner join dpi d on d.id = m.dpi_mujer
                     inner join persona p on p.id = d.id_persona
-                where d.id = dpi_hombre_div;
+                where p.cui = dpi_D;
 
-                update persona
-                set estado_civil = 4
-                where id = id_hombre_div;
+                select count(*) into divorciada
+                from divorcio di
+                    inner join matrimonio m on m.id = di.id_matrimonio
+                    inner join dpi d on d.id_persona = m.dpi_mujer
+                    inner join persona p on p.id = d.id_persona
+                where p.cui = dpi_D;
 
-                select CONCAT('Murio ', nombre_m, ' y ', nombre_d, ' quedo viudo') DEFUNCION;
+                IF casada - divorciada = 1 THEN
+                    select dpi_hombre into dpi_hombre_div
+                    from matrimonio m
+                    where m.dpi_mujer = dpi_per
+                    order by fecha_matrimonio DESC
+                    LIMIT 1;
 
-            ELSE
-                select CONCAT('Murio ', nombre_m) DEFUNCION;
+                    select p.id, p.nombre1 into id_hombre_div, nombre_d
+                    from dpi d
+                        inner join persona p on p.id = d.id_persona
+                    where d.id = dpi_hombre_div;
 
-            end if;
+                    update persona
+                    set estado_civil = 4
+                    where id = id_hombre_div;
+
+                    select CONCAT('Murio ', nombre_m, ' y ', nombre_d, ' quedo viudo') DEFUNCION;
+
+                ELSE
+                    select CONCAT('Murio ', nombre_m) DEFUNCION;
+
+                end if;
+            END IF;
         END IF;
     END IF;
 end;
@@ -431,18 +436,22 @@ begin
     ELSE
         IF fecha_r > fecha_anul or fecha_anul is null THEN
             IF tipo_l = 'M' THEN
-                IF fecha_ven > STR_TO_DATE(fecha_r, '%Y-%m-%d') THEN
-                    update licencia
-                    set licencia.fecha_vencimiento = DATE_ADD(fecha_vencimiento, INTERVAL 1 YEAR),
-                    tipo_licencia = 4
-                    where licencia.id = no_lic;
+                IF tip_lic = 5 THEN
+                    select 'SOLO SE PUEDE RENOVAR UNA LICENCIA E POR UNA DE LA MISMA CLASE' AVISO;
                 ELSE
-                    update licencia
-                    set licencia.fecha_vencimiento = DATE_ADD(STR_TO_DATE(fecha_r, '%Y-%m-%d'), INTERVAL 1 YEAR),
-                    tipo_licencia = 4
-                    where licencia.id = no_lic;
+                    IF fecha_ven > STR_TO_DATE(fecha_r, '%Y-%m-%d') THEN
+                        update licencia
+                        set licencia.fecha_vencimiento = DATE_ADD(fecha_vencimiento, INTERVAL 1 YEAR),
+                        tipo_licencia = 4
+                        where licencia.id = no_lic;
+                    ELSE
+                        update licencia
+                        set licencia.fecha_vencimiento = DATE_ADD(STR_TO_DATE(fecha_r, '%Y-%m-%d'), INTERVAL 1 YEAR),
+                        tipo_licencia = 4
+                        where licencia.id = no_lic;
+                    END IF;
+                    select 'Se ha renovado a la licencia M' AVISO;
                 END IF;
-                select 'Se ha renovado a la licencia M' AVISO;
             ELSEIF tipo_l = 'E' THEN
                 IF tip_lic = 5 THEN
                     IF fecha_ven > STR_TO_DATE(fecha_r, '%Y-%m-%d') THEN
@@ -461,87 +470,99 @@ begin
                     select 'SOLO SE PUEDE RENOVAR UNA LICENCIA E POR UNA DE LA MISMA CLASE' AVISO;
                 END IF;
             ELSEIF tipo_l = 'C' THEN
-                IF estado_lic = 'C1' THEN
-                    IF fecha_ven > STR_TO_DATE(fecha_r, '%Y-%m-%d') THEN
-                        update licencia
-                        set licencia.fecha_vencimiento = DATE_ADD(fecha_vencimiento, INTERVAL 1 YEAR),
-                            estado = 'C2',
-                            tipo_licencia = 3
-                        where licencia.id = no_lic;
-                    ELSE
-                        update licencia
-                        set licencia.fecha_vencimiento = DATE_ADD(STR_TO_DATE(fecha_r, '%Y-%m-%d'), INTERVAL 1 YEAR),
-                            estado = 'C2',
-                            tipo_licencia = 3
-                        where licencia.id = no_lic;
-                    END IF;
-                ELSEIF estado_lic = 'C2' THEN
-                    IF fecha_ven > STR_TO_DATE(fecha_r, '%Y-%m-%d') THEN
-                        update licencia
-                        set licencia.fecha_vencimiento = DATE_ADD(fecha_vencimiento, INTERVAL 1 YEAR),
-                            estado = 'C3',
-                            tipo_licencia = 3
-                        where licencia.id = no_lic;
-                    ELSE
-                        update licencia
-                        set licencia.fecha_vencimiento = DATE_ADD(STR_TO_DATE(fecha_r, '%Y-%m-%d'), INTERVAL 1 YEAR),
-                            estado = 'C3',
-                            tipo_licencia = 3
-                        where licencia.id = no_lic;
-                    END IF;
-                ELSEIF estado_lic = 'C3' THEN
-                    IF fecha_ven > STR_TO_DATE(fecha_r, '%Y-%m-%d') THEN
-                        update licencia
-                        set licencia.fecha_vencimiento = DATE_ADD(fecha_vencimiento, INTERVAL 1 YEAR),
-                            estado = 'C4',
-                            tipo_licencia = 3
-                        where licencia.id = no_lic;
-                    ELSE
-                        update licencia
-                        set licencia.fecha_vencimiento = DATE_ADD(STR_TO_DATE(fecha_r, '%Y-%m-%d'), INTERVAL 1 YEAR),
-                            estado = 'C4',
-                            tipo_licencia = 3
-                        where licencia.id = no_lic;
-                    END IF;
+                IF tip_lic = 5 THEN
+                    select 'SOLO SE PUEDE RENOVAR UNA LICENCIA E POR UNA DE LA MISMA CLASE' AVISO;
                 ELSE
-                    IF fecha_ven > STR_TO_DATE(fecha_r, '%Y-%m-%d') THEN
-                        update licencia
-                        set licencia.fecha_vencimiento = DATE_ADD(fecha_vencimiento, INTERVAL 1 YEAR),
-                            estado = 'C3',
-                            tipo_licencia = 3
-                        where licencia.id = no_lic;
+                    IF estado_lic = 'C1' THEN
+                        IF fecha_ven > STR_TO_DATE(fecha_r, '%Y-%m-%d') THEN
+                            update licencia
+                            set licencia.fecha_vencimiento = DATE_ADD(fecha_vencimiento, INTERVAL 1 YEAR),
+                                estado = 'C2',
+                                tipo_licencia = 3
+                            where licencia.id = no_lic;
+                        ELSE
+                            update licencia
+                            set licencia.fecha_vencimiento = DATE_ADD(STR_TO_DATE(fecha_r, '%Y-%m-%d'), INTERVAL 1 YEAR),
+                                estado = 'C2',
+                                tipo_licencia = 3
+                            where licencia.id = no_lic;
+                        END IF;
+                    ELSEIF estado_lic = 'C2' THEN
+                        IF fecha_ven > STR_TO_DATE(fecha_r, '%Y-%m-%d') THEN
+                            update licencia
+                            set licencia.fecha_vencimiento = DATE_ADD(fecha_vencimiento, INTERVAL 1 YEAR),
+                                estado = 'C3',
+                                tipo_licencia = 3
+                            where licencia.id = no_lic;
+                        ELSE
+                            update licencia
+                            set licencia.fecha_vencimiento = DATE_ADD(STR_TO_DATE(fecha_r, '%Y-%m-%d'), INTERVAL 1 YEAR),
+                                estado = 'C3',
+                                tipo_licencia = 3
+                            where licencia.id = no_lic;
+                        END IF;
+                    ELSEIF estado_lic = 'C3' THEN
+                        IF fecha_ven > STR_TO_DATE(fecha_r, '%Y-%m-%d') THEN
+                            update licencia
+                            set licencia.fecha_vencimiento = DATE_ADD(fecha_vencimiento, INTERVAL 1 YEAR),
+                                estado = 'C4',
+                                tipo_licencia = 3
+                            where licencia.id = no_lic;
+                        ELSE
+                            update licencia
+                            set licencia.fecha_vencimiento = DATE_ADD(STR_TO_DATE(fecha_r, '%Y-%m-%d'), INTERVAL 1 YEAR),
+                                estado = 'C4',
+                                tipo_licencia = 3
+                            where licencia.id = no_lic;
+                        END IF;
                     ELSE
-                        update licencia
-                        set licencia.fecha_vencimiento = DATE_ADD(STR_TO_DATE(fecha_r, '%Y-%m-%d'), INTERVAL 1 YEAR),
-                            estado = 'C3',
-                            tipo_licencia = 3
-                        where licencia.id = no_lic;
+                        IF fecha_ven > STR_TO_DATE(fecha_r, '%Y-%m-%d') THEN
+                            update licencia
+                            set licencia.fecha_vencimiento = DATE_ADD(fecha_vencimiento, INTERVAL 1 YEAR),
+                                estado = 'C3',
+                                tipo_licencia = 3
+                            where licencia.id = no_lic;
+                        ELSE
+                            update licencia
+                            set licencia.fecha_vencimiento = DATE_ADD(STR_TO_DATE(fecha_r, '%Y-%m-%d'), INTERVAL 1 YEAR),
+                                estado = 'C3',
+                                tipo_licencia = 3
+                            where licencia.id = no_lic;
+                        END IF;
                     END IF;
+                    select 'Se ha renovado a la licencia C' AVISO;
                 END IF;
-                select 'Se ha renovado a la licencia C' AVISO;
             ELSEIF tipo_l = 'B' THEN
-                IF estado_lic = 'C3' or estado_lic = 'A' THEN
-                    update licencia
-                    set licencia.fecha_vencimiento = DATE_ADD(STR_TO_DATE(fecha_r, '%Y-%m-%d'), INTERVAL 1 YEAR),
-                        estado = 'B',
-                        tipo_licencia = 2
-                    where licencia.id = no_lic;
-
-                    select 'Se ha renovado la licencia B' AVISO;
+                IF tip_lic = 5 THEN
+                    select 'SOLO SE PUEDE RENOVAR UNA LICENCIA E POR UNA DE LA MISMA CLASE' AVISO;
                 ELSE
-                    select 'AUN NO SE PUEDE CREAR UNA LICENCIA TIPO B' AVISO;
+                    IF estado_lic = 'C3' or estado_lic = 'A' THEN
+                        update licencia
+                        set licencia.fecha_vencimiento = DATE_ADD(STR_TO_DATE(fecha_r, '%Y-%m-%d'), INTERVAL 1 YEAR),
+                            estado = 'B',
+                            tipo_licencia = 2
+                        where licencia.id = no_lic;
+
+                        select 'Se ha renovado la licencia B' AVISO;
+                    ELSE
+                        select 'AUN NO SE PUEDE CREAR UNA LICENCIA TIPO B' AVISO;
+                    END IF;
                 END IF;
             ELSEIF tipo_l = 'A' THEN
-                IF estado_lic = 'C4' or estado_lic = 'B' THEN
-                    update licencia
-                    set licencia.fecha_vencimiento = DATE_ADD(STR_TO_DATE(fecha_r, '%Y-%m-%d'), INTERVAL 1 YEAR),
-                        estado = 'A',
-                        tipo_licencia = 1
-                    where licencia.id = no_lic;
-
-                    select 'Se ha renovado la licencia A' AVISO;
+                IF tip_lic = 5 THEN
+                    select 'SOLO SE PUEDE RENOVAR UNA LICENCIA E POR UNA DE LA MISMA CLASE' AVISO;
                 ELSE
-                    select 'AUN NO SE PUEDE CREAR UNA LICENCIA TIPO A' AVISO;
+                    IF estado_lic = 'C4' or estado_lic = 'B' THEN
+                        update licencia
+                        set licencia.fecha_vencimiento = DATE_ADD(STR_TO_DATE(fecha_r, '%Y-%m-%d'), INTERVAL 1 YEAR),
+                            estado = 'A',
+                            tipo_licencia = 1
+                        where licencia.id = no_lic;
+
+                        select 'Se ha renovado la licencia A' AVISO;
+                    ELSE
+                        select 'AUN NO SE PUEDE CREAR UNA LICENCIA TIPO A' AVISO;
+                    END IF;
                 END IF;
             ELSE
                 select 'LICENCIA NO VALIDA' AVISO;
@@ -593,3 +614,179 @@ begin
 end;
 
 
+DROP PROCEDURE IF EXISTS getNacimiento;
+CREATE PROCEDURE getNacimiento(cui_p BIGINT)
+begin
+    declare acta INT;
+    declare id_pa INT;
+    declare dpi_pa BIGINT;
+    declare nombresP varchar(200);
+    declare apellidosP varchar(100);
+    declare id_ma INT;
+    declare dpi_ma BIGINT;
+    declare nombresM varchar(200);
+    declare apellidosM varchar(100);
+
+    select count(*) into acta
+    from persona p
+    where p.cui = cui_p;
+
+    select p.dpi_padre, p.dpi_madre into id_pa, id_ma
+    from persona p
+    where p.cui = cui_p;
+
+    select concat(p.nombre1, ' ', coalesce(nombre2, ''), ' ', coalesce(nombre3, '')),
+           concat(p.apellido1, ' ', apellido2), p.cui into nombresP, apellidosP, dpi_pa
+    from dpi d
+    inner join persona p on p.id = d.id_persona
+    where d.id = id_pa;
+
+    select concat(p.nombre1, ' ', coalesce(nombre2, ''), ' ', coalesce(nombre3, '')),
+           concat(p.apellido1, ' ', apellido2), p.cui into nombresM, apellidosM, dpi_ma
+    from dpi d
+    inner join persona p on p.id = d.id_persona
+    where d.id = id_ma;
+
+    IF acta = 0 THEN
+        select 'NO EXISTE ESTE CUI' AVISO;
+    else
+        select p.id, p.cui, concat(p.apellido1, ' ', p.apellido2) Apellidos,
+               concat(p.nombre1, ' ',coalesce(p.nombre2, ''), ' ',coalesce(p.nombre3, '')) Nombres,
+               coalesce(dpi_pa, 'SIN PADRE') dpi_Padre, coalesce(nombresP, 'SIN PADRE') nombres_Padre, coalesce(apellidosP, 'SIN PADRE') apellidos_Padre,
+               coalesce(dpi_ma, 'SIN PADRE') dpi_Madre, coalesce(nombresM, 'SIN MADRE') nombres_Madre, coalesce(apellidosM, 'SIN MADRE') apellidos_Madre,
+               p.fecha_nacimiento, d.departamento, m.municipio, p.genero
+        from persona p
+        inner join municipio m on m.id = p.codigo_municipio
+        inner join departamento d on d.id = m.id_departamento
+        where p.cui = cui_p;
+    END IF;
+end;
+
+
+DROP PROCEDURE IF EXISTS getDpi;
+CREATE PROCEDURE getDpi(cui_p BIGINT)
+begin
+    declare acta INT;
+
+    select count(*) into acta
+    from dpi d
+    inner join persona p on p.id = d.id_persona
+    where p.cui = cui_p;
+
+
+
+    IF acta = 0 THEN
+        select 'NO EXISTE ESTE DPI' AVISO;
+    else
+        select p.cui, concat(p.apellido1, ' ', p.apellido2) Apellidos,
+               concat(p.nombre1, ' ',coalesce(p.nombre2, ''), ' ',coalesce(p.nombre3, '')) Nombres,
+               p.fecha_nacimiento, dp.departamento departamento_nacimiento, mp.municipio municipio_nacimiento,
+               dd.departamento departamento_reside, md.municipio municipio_reside, p.genero
+        from dpi d
+        inner join persona p on p.id = d.id_persona
+        inner join municipio mp on mp.id = p.codigo_municipio
+        inner join departamento dp on dp.id = mp.id_departamento
+        inner join municipio md on md.id = d.codigo_municipio
+        inner join departamento dd on dd.id = md.id_departamento
+        where p.cui = cui_p;
+    END IF;
+end;
+
+DROP PROCEDURE IF EXISTS getLicencias;
+CREATE PROCEDURE getLicencias(cui_p BIGINT)
+begin
+    declare acta INT;
+
+    select count(*) into acta
+    from persona p
+    where p.cui = cui_p;
+
+    IF acta = 0 THEN
+        select 'NO EXISTE ESTE CUI' AVISO;
+    else
+        select l.id No_Licencia, concat(p.nombre1, ' ',coalesce(p.nombre2, ''), ' ',coalesce(p.nombre3, '')) Nombres,
+               concat(p.apellido1, ' ', p.apellido2) Apellidos, t.estado, l.fecha_emision, l.fecha_vencimiento
+        from licencia l
+        inner join persona p on p.id = l.id_persona
+        inner join tipo t on l.tipo_licencia = t.id
+        where p.cui = cui_p;
+    END IF;
+end;
+
+
+DROP PROCEDURE IF EXISTS getDivorcio;
+CREATE PROCEDURE getDivorcio(numMa INT)
+begin
+    declare acta INT;
+
+    select count(*) into acta
+    from divorcio d
+    where d.id_matrimonio = numMa;
+
+
+    IF acta = 0 THEN
+        select 'NO EXISTE ESTE DIVORSIO' AVISO;
+    else
+        select d.id, ph.cui Dpi_Hombre, concat(ph.nombre1, ' ', coalesce(ph.nombre2, ''), ' ', coalesce(ph.nombre3, '')) Nombre_Hombre,
+               pm.cui Dpi_Mujer, concat(pm.nombre1, ' ', coalesce(pm.nombre2, ''), ' ', coalesce(pm.nombre3, '')) Nombre_Mujer,
+               d.fecha_divorcio
+        from divorcio d
+        inner join matrimonio m on d.id_matrimonio = m.id
+        inner join dpi dh on dh.id = m.dpi_hombre
+        inner join dpi dm on dm.id = m.dpi_mujer
+        inner join persona ph on ph.id = dh.id_persona
+        inner join persona pm on pm.id = dm.id_persona
+        where d.id_matrimonio = numMa;
+    END IF;
+end;
+
+
+DROP PROCEDURE IF EXISTS getDefuncion;
+CREATE PROCEDURE getDefuncion(cui_p BIGINT)
+begin
+    declare acta INT;
+
+    select count(*) into acta
+    from persona p
+    where p.cui = cui_p;
+
+
+    IF acta = 0 THEN
+        select 'NO EXISTE ESTE DPI' AVISO;
+    else
+        select d.id, p.cui, concat(p.apellido1, ' ', p.apellido2) Apellidos,
+               concat(p.nombre1, ' ', coalesce(p.nombre2, ''), ' ', coalesce(p.nombre3, '')) Nombres,
+               d.fecha_fallecimiento, d2.departamento, m.municipio, d.motivo
+        from defuncion d
+        inner join persona p on p.id = d.id_persona
+        inner join municipio m on p.codigo_municipio = m.id
+        inner join departamento d2 on m.id_departamento = d2.id
+        where p.cui = cui_p;
+    END IF;
+end;
+
+
+DROP PROCEDURE IF EXISTS getMatrimonio;
+CREATE PROCEDURE getMatrimonio(numMa INT)
+begin
+    declare acta INT;
+
+    select count(*) into acta
+    from matrimonio m
+    where m.id = numMa;
+
+
+    IF acta = 0 THEN
+        select 'NO EXISTE ESTE MATRIMONIO' AVISO;
+    else
+        select m.id, ph.cui Dpi_Hombre, concat(ph.nombre1, ' ', coalesce(ph.nombre2, ''), ' ', coalesce(ph.nombre3, '')) Nombre_Hombre,
+               pm.cui Dpi_Mujer, concat(pm.nombre1, ' ', coalesce(pm.nombre2, ''), ' ', coalesce(pm.nombre3, '')) Nombre_Mujer,
+               m.fecha_matrimonio
+        from matrimonio m
+        inner join dpi dh on dh.id = m.dpi_hombre
+        inner join dpi dm on dm.id = m.dpi_mujer
+        inner join persona ph on ph.id = dh.id_persona
+        inner join persona pm on pm.id = dm.id_persona
+        where m.id = numMa;
+    END IF;
+end;
