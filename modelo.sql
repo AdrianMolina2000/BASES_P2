@@ -1,16 +1,16 @@
-CREATE TABLE proyecto2.estado_civil (
+CREATE TABLE estado_civil (
   id INT NOT NULL AUTO_INCREMENT,
   estado VARCHAR(12) NOT NULL,
   PRIMARY KEY (id)
 );
 
-CREATE TABLE proyecto2.departamento (
+CREATE TABLE departamento (
   id INT NOT NULL AUTO_INCREMENT,
   departamento VARCHAR(50) NOT NULL,
   PRIMARY KEY (id)
 );
 
-CREATE TABLE proyecto2.municipio (
+CREATE TABLE municipio (
   id INT NOT NULL,
   municipio VARCHAR(50) NOT NULL,
   id_departamento INT NOT NULL,
@@ -18,7 +18,7 @@ CREATE TABLE proyecto2.municipio (
   FOREIGN KEY(id_departamento) REFERENCES departamento(id) ON DELETE CASCADE ON UPDATE CASCADE
 );
 
-CREATE TABLE proyecto2.persona (
+CREATE TABLE persona (
   id INT NOT NULL AUTO_INCREMENT,
   cui BIGINT NOT NULL UNIQUE,
   dpi_padre INT NULL,
@@ -37,7 +37,7 @@ CREATE TABLE proyecto2.persona (
   FOREIGN KEY(codigo_municipio) REFERENCES municipio(id) ON DELETE CASCADE ON UPDATE CASCADE
 );
 
-CREATE TABLE proyecto2.defuncion (
+CREATE TABLE defuncion (
   id INT NOT NULL AUTO_INCREMENT,
   fecha_fallecimiento DATE NOT NULL,
   motivo VARCHAR(200) NOT NULL,
@@ -46,7 +46,7 @@ CREATE TABLE proyecto2.defuncion (
   FOREIGN KEY(id_persona) REFERENCES persona(id) ON DELETE CASCADE ON UPDATE CASCADE
 );
 
-CREATE TABLE proyecto2.dpi (
+CREATE TABLE dpi (
   id INT NOT NULL AUTO_INCREMENT,
   fecha_emision DATE NOT NULL,
   id_persona INT NOT NULL,
@@ -56,22 +56,22 @@ CREATE TABLE proyecto2.dpi (
   FOREIGN KEY(codigo_municipio) REFERENCES municipio(id) ON DELETE CASCADE ON UPDATE CASCADE
 );
 
-ALTER TABLE proyecto2.persona
+ALTER TABLE persona
 ADD CONSTRAINT FK_dpi_padre FOREIGN KEY(dpi_padre) REFERENCES dpi(id) ON DELETE CASCADE ON UPDATE CASCADE,
 ADD CONSTRAINT FK_dpi_madre FOREIGN KEY(dpi_madre) REFERENCES dpi(id) ON DELETE CASCADE ON UPDATE CASCADE
 ;
 
-CREATE TABLE proyecto2.matrimonio (
+CREATE TABLE matrimonio (
   id INT NOT NULL AUTO_INCREMENT,
   fecha_matrimonio DATE NOT NULL,
   dpi_hombre INT NOT NULL,
   dpi_mujer INT NOT NULL,
   PRIMARY KEY (id),
-  FOREIGN KEY(dpi_hombre) REFERENCES persona(id) ON DELETE CASCADE ON UPDATE CASCADE,
-  FOREIGN KEY(dpi_mujer) REFERENCES persona(id) ON DELETE CASCADE ON UPDATE CASCADE
+  FOREIGN KEY(dpi_hombre) REFERENCES dpi(id) ON DELETE CASCADE ON UPDATE CASCADE,
+  FOREIGN KEY(dpi_mujer) REFERENCES dpi(id) ON DELETE CASCADE ON UPDATE CASCADE
 );
 
-CREATE TABLE proyecto2.divorcio (
+CREATE TABLE divorcio (
   id INT NOT NULL AUTO_INCREMENT,
   fecha_divorcio DATE NOT NULL,
   id_matrimonio INT NOT NULL,
@@ -79,13 +79,13 @@ CREATE TABLE proyecto2.divorcio (
   FOREIGN KEY(id_matrimonio) REFERENCES matrimonio(id) ON DELETE CASCADE ON UPDATE CASCADE
 );
 
-CREATE TABLE proyecto2.tipo (
+CREATE TABLE tipo (
   id INT NOT NULL AUTO_INCREMENT,
   estado CHAR(1) NOT NULL,
   PRIMARY KEY (id)
 );
 
-CREATE TABLE proyecto2.licencia (
+CREATE TABLE licencia (
   id INT NOT NULL AUTO_INCREMENT,
   fecha_emision DATE NOT NULL,
   fecha_vencimiento DATE NOT NULL,
@@ -98,7 +98,7 @@ CREATE TABLE proyecto2.licencia (
   FOREIGN KEY(id_persona) REFERENCES persona(id) ON DELETE CASCADE ON UPDATE CASCADE
 );
 
-CREATE TABLE proyecto2.anular (
+CREATE TABLE anular (
   id INT NOT NULL AUTO_INCREMENT,
   fecha_anulacion DATE NOT NULL,
   motivo VARCHAR(200) NOT NULL,
